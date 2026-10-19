@@ -1,0 +1,54 @@
+name: Build DevForge
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    name: Linux x86_64
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            qt6-base-dev
+
+      - name: Configure project
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Compile DevForge
+        run: cmake --build build --parallel 2
+
+      - name: Prepare distribution
+        run: |
+          mkdir -p package
+          cp build/DevForge package/DevForge
+          cp README.md package/README.md
+          tar -czf DevForge-linux-x86_64.tar.gz -C package .
+
+      - name: Upload Linux build
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevForge-linux-x86_64
+          path: DevForge-linux-x86_64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
